@@ -66,6 +66,13 @@ class Gestao:
         cursor.execute("SELECT produto, quantidade FROM estoque")
         produtos = cursor.fetchall()
         return produtos
+    
+    def limpar_estoque(self):
+        cursor = self.conn.cursor()
+        cursor.execute("DELETE FROM estoque")
+        self.conn.commit()
+        print("Estoque limpo com sucesso.")
+
 
     def fechar_conexao(self):
         self.conn.close()
@@ -80,7 +87,8 @@ def menu():
         print("2 - Remover produto")
         print("3 - Consultar estoque")
         print("4 - Listar produtos")
-        print("5 - Sair")
+        print("5 - Limpar estoque")
+        print("6 - Sair")
 
         opcao = input("Escolha uma opção: ")
 
@@ -97,7 +105,7 @@ def menu():
         elif opcao == "3":
             produto = input("Nome do produto: ")
             quantidade = sistema.consultar_estoque(produto)
-            print(f'Quantidade de {produto} em estoque: {quantidade}')
+            print(f"Quantidade de {produto} em estoque: {quantidade}")
 
         elif opcao == "4":
             produtos = sistema.listar_produtos()
@@ -105,17 +113,26 @@ def menu():
             if produtos:
                 print("\nProdutos em estoque:")
                 for produto, quantidade in produtos:
-                    print(f'{produto}: {quantidade}')
+                    print(f"{produto}: {quantidade}")
             else:
                 print("Nenhum produto cadastrado.")
 
         elif opcao == "5":
+            confirmar = input("Tem certeza que deseja limpar todo o estoque? (s/n): ")
+
+            if confirmar.lower() == "s":
+                sistema.limpar_estoque()
+            else:
+                print("Operação cancelada.")
+
+        elif opcao == "6":
             sistema.fechar_conexao()
             print("Sistema encerrado.")
             break
 
         else:
             print("Opção inválida. Tente novamente.")
+
 
 
 menu()
