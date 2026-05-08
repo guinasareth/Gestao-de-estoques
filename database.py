@@ -1,138 +1,47 @@
 import sqlite3
+from pathlib import Path
 
 
-class Gestao:
-    def __init__(self, banco):
-        self.conn = sqlite3.connect(banco)
-        self.criar_tabela_estoque()
+BASE_DIR = Path(__file__).resolve().parent
+DB_PATH = BASE_DIR / "estoque.db"
 
-    def criar_tabela_estoque(self):
-        cursor = self.conn.cursor()
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS estoque (
-                id INTEGER PRIMARY KEY,
-                produto TEXT,
-                quantidade INTEGER
-            )
-        ''')
-        self.conn.commit()
 
-    def adicionar_produto(self, produto, quantidade):
-        cursor = self.conn.cursor()
-        cursor.execute(
-            "INSERT INTO estoque (produto, quantidade) VALUES (?, ?)",
-            (produto, quantidade)
+def conectar():
+    conexao = sqlite3.connect(DB_PATH)
+    return conexao
+
+
+def criar_tabelas():
+    conexao = conectar()
+    cursor = conexao.cursor()
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS produtos (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            nome TEXT NOT NULL,
+            categoria TEXT NOT NULL,
+            preco REAL NOT NULL,
+            quantidade_inicial INTEGER NOT NULL,
+            quantidade_atual INTEGER NOT NULL,
+            especificacoes TEXT
         )
-        self.conn.commit()
-        print(f'{produto} adicionado ao estoque.')
+    """)
 
-    def remover_produto(self, produto, quantidade):
-        cursor = self.conn.cursor()
-        cursor.execute(
-            "SELECT quantidade FROM estoque WHERE produto=?",
-            (produto,)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS movimentacoes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            produto_id INTEGER NOT NULL,
+            tipo TEXT NOT NULL,
+            motivo TEXT NOT NULL,
+            quantidade INTEGER NOT NULL,
+            data TEXT NOT NULL,
+            FOREIGN KEY (produto_id) REFERENCES produtos (id)
         )
-        resultado = cursor.fetchone()
+    """)
 
-        if resultado:
-            estoque_atual = resultado[0]
-
-            if estoque_atual >= quantidade:
-                cursor.execute(
-                    "UPDATE estoque SET quantidade=? WHERE produto=?",
-                    (estoque_atual - quantidade, produto)
-                )
-                self.conn.commit()
-                print(f'{quantidade} unidade(s) de {produto} removida(s).')
-            else:
-                print(f'Quantidade insuficiente de {produto} em estoque.')
-        else:
-            print(f'{produto} não encontrado em estoque.')
-
-    def consultar_estoque(self, produto):
-        cursor = self.conn.cursor()
-        cursor.execute(
-            "SELECT quantidade FROM estoque WHERE produto=?",
-            (produto,)
-        )
-        resultado = cursor.fetchone()
-
-        if resultado:
-            return resultado[0]
-        return 0
-
-    def listar_produtos(self):
-        cursor = self.conn.cursor()
-        cursor.execute("SELECT produto, quantidade FROM estoque")
-        produtos = cursor.fetchall()
-        return produtos
-    
-    def limpar_estoque(self):
-        cursor = self.conn.cursor()
-        cursor.execute("DELETE FROM estoque")
-        self.conn.commit()
-        print("Estoque limpo com sucesso.")
+    conexao.commit()
+    conexao.close()
 
 
-    def fechar_conexao(self):
-        self.conn.close()
-
-
-def menu():
-    sistema = Gestao("estoque.db")
-
-    while True:
-        print("\n===== SISTEMA DE ESTOQUE =====")
-        print("1 - Adicionar produto")
-        print("2 - Remover produto")
-        print("3 - Consultar estoque")
-        print("4 - Listar produtos")
-        print("5 - Limpar estoque")
-        print("6 - Sair")
-
-        opcao = input("Escolha uma opção: ")
-
-        if opcao == "1":
-            produto = input("Nome do produto: ")
-            quantidade = int(input("Quantidade: "))
-            sistema.adicionar_produto(produto, quantidade)
-
-        elif opcao == "2":
-            produto = input("Nome do produto: ")
-            quantidade = int(input("Quantidade para remover: "))
-            sistema.remover_produto(produto, quantidade)
-
-        elif opcao == "3":
-            produto = input("Nome do produto: ")
-            quantidade = sistema.consultar_estoque(produto)
-            print(f"Quantidade de {produto} em estoque: {quantidade}")
-
-        elif opcao == "4":
-            produtos = sistema.listar_produtos()
-
-            if produtos:
-                print("\nProdutos em estoque:")
-                for produto, quantidade in produtos:
-                    print(f"{produto}: {quantidade}")
-            else:
-                print("Nenhum produto cadastrado.")
-
-        elif opcao == "5":
-            confirmar = input("Tem certeza que deseja limpar todo o estoque? (s/n): ")
-
-            if confirmar.lower() == "s":
-                sistema.limpar_estoque()
-            else:
-                print("Operação cancelada.")
-
-        elif opcao == "6":
-            sistema.fechar_conexao()
-            print("Sistema encerrado.")
-            break
-
-        else:
-            print("Opção inválida. Tente novamente.")
-
-
-
-menu()
+criar_tabelas()
+print("Banco de dados criado com sucesso!")
